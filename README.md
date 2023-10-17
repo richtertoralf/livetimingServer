@@ -60,7 +60,8 @@ pip3 install gunicorn
 ```
 # als user 'livetiming' ausführen:
 # Erstelle die Pythondatei livetiming_receiver.py
-sudo touch mkdir ~/livetiming_app/livetiming_receiver.py
+mkdir ~/livetiming_app
+sudo touch ~/livetiming_app/livetiming_receiver.py
 sudo bash -c 'cat > ~/livetiming_app/livetiming_receiver.py' << EOF
 from flask import Flask, request
 from pymongo import MongoClient
@@ -75,9 +76,9 @@ def livetiming():
     xml_data = request.data  # Hier erhältst du die XML-Daten von der POST-Anfrage
     print("Empfangene XML-Daten:")
     print(xml_data.decode('utf-8'))  # Ausgabe der XML-Daten im Terminal
-    # Speichere die XML-Daten in MongoDB
-    # collection.insert_one({'xml_data': xml_data.decode('utf-8')})
-    # return 'XML-Daten empfangen und in MongoDB gespeichert.'
+    Speichere die XML-Daten in MongoDB
+    collection.insert_one({'xml_data': xml_data.decode('utf-8')})
+    return 'XML-Daten empfangen und in MongoDB gespeichert.'
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
