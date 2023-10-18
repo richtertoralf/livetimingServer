@@ -51,7 +51,7 @@ cd ~/livetimingenv
 pip install Flask Flask-SocketIO
 # pip3 install gunicorn
 pip install BaseXClient
-
+mkdir ~/basexdb
 ```
 ### BaseX konfigurieren
 #### als systemd Dienst einrichten
@@ -64,9 +64,8 @@ After=network.target
 [Service]
 User=livetiming
 Group=livetiming
-# Pfade noch anpassen
-WorkingDirectory=/pfad/zu/deinem/basex/
-ExecStart=/pfad/zu/deinem/basex/basexserver
+WorkingDirectory=/home/livetiming/basexdb/  # Pfad zum BaseX-Datenbankverzeichnis
+ExecStart=/usr/bin/basexserver  # Pfad zum basexserver-Befehl
 Restart=on-failure
 
 [Install]
