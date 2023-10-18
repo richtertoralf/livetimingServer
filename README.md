@@ -7,10 +7,11 @@ sudo apt update && sudo apt upgrade
 # nginx Server installieren
 sudo apt install nginx
 # da die Daten vom Winlaufen Zeitnehmer PC im XML Format geliefert werden, habe ich mich für eine spezifische XML NoSQL Datenbank entschieden.
-# BaseX benötigt die Jave Umgebung und einige extra Module, die aktuell nicht automatisch per 'apt install basex' mitkommen. Deshalb:
-sudo apt install openjdk-11-jdk-headless
-sudo apt install libtagsoup-java libjline2-java libxml-commons-resolver1.1-java libjing-java
-sudo apt install basex
+# zur Installation von BaseX und Java direkt auf der Homepage nachsehen:
+# https://adoptium.net/installation/linux/
+# https://basex.org/download/
+# Es gibt fertige Binärdateien. Diese dann nach /usr/local/bin verschieben.
+
 ```
 ### Endpoint anlegen
 ```
@@ -64,15 +65,14 @@ sudo chown -R livetiming:livetiming /home/livetiming/basexdb/
 ```
 sudo bash -c 'cat > /etc/systemd/system/basexserver.service' << EOF
 [Unit]
-Description=BaseX XML Database Server
+Description=BaseX XML Database
 After=network.target
 
 [Service]
+ExecStart=/usr/local/bin/basex/bin/basexserver
 User=livetiming
-Group=livetiming
-WorkingDirectory=/home/livetiming/basexdb/  # Pfad zum BaseX-Datenbankverzeichnis
-ExecStart=/usr/bin/basexserver  # Pfad zum basexserver-Befehl
-Restart=on-failure
+WorkingDirectory=/home/livetiming/basex
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
@@ -83,10 +83,9 @@ sudo systemctl start basexserver
 sudo systemctl enable basexserver
 
 ```
-#### dem User 'livetiming' die Zugriffsrechte geben
+#### dem User 'livetiming' die Zugriffsrechte für die DB geben
 ```
-sudo nano /etc/basex/basexserver.config
-# Berechtigungen für User 'livetiming' konfigurieren
+sudo nano /home/livetiming/basex/.basex
 ```
 
 ### simples Python-Skript zum Empfang der xml-Daten und zum Einfügen in die BaseX XML DB
@@ -107,8 +106,8 @@ def livetiming():
     print("Empfangene XML-Daten:")
     print(xml_data.decode('utf-8'))  # Ausgabe der XML-Daten im Terminal
 
-    # Verbindung zur BaseX-Datenbank herstellen
-    session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
+    # Verbindung zur BaseX-Datenbank herstellen mit den Anmeldeinformationen des Livetiming-Benutzers
+    session = BaseXClient.Session('localhost', 1984, 'livetiming', 'linux')
 
     # XML-Daten in die BaseX-Datenbank einfügen
     try:
@@ -125,7 +124,6 @@ def livetiming():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
 EOF
 chmod -R 700 ~/livetiming_app
 ```
