@@ -31,7 +31,7 @@ EOF
 # symbolischen Link erstellen
 sudo ln -s /etc/nginx/sites-available/livetiming /etc/nginx/sites-enabled/
 ```
-### Backendabhängigkeiten für Python installieren
+### Backendabhängigkeiten für Python installieren und User 'livetiming' anlegen
 ```
 # überprüfen, ob Python vorhanden ist
 python3 --version
@@ -55,7 +55,33 @@ pip install BaseXClient
 ```
 ### BaseX konfigurieren
 #### als systemd Dienst einrichten
+```
+sudo bash -c 'cat > /etc/systemd/system/basexserver.service' << EOF
+[Unit]
+Description=BaseX XML Database Server
+After=network.target
+
+[Service]
+User=livetiming
+Group=livetiming
+# Pfade noch anpassen
+WorkingDirectory=/pfad/zu/deinem/basex/
+ExecStart=/pfad/zu/deinem/basex/basexserver
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl start basexserver
+sudo systemctl enable basexserver
+
+```
 #### dem User 'livetiming' die Zugriffsrechte geben
+```
+sudo nano /etc/basex/basexserver.config
+# Berechtigungen für User 'livetiming' konfigurieren
+```
 
 ### simples Python-Skript zum Empfang der xml-Daten und zum Einfügen in die BaseX XML DB
 ```
@@ -96,4 +122,8 @@ if __name__ == '__main__':
 
 EOF
 chmod -R 700 ~/livetiming_app
+```
+### simples Beispiel zum Abrufen der Daten aus der Datenbank und Verteilung an die Clients
+```
+# Skript folgt gleich
 ```
