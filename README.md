@@ -7,6 +7,9 @@ sudo apt update && sudo apt upgrade
 # nginx Server installieren
 sudo apt install nginx
 # da die Daten vom Winlaufen Zeitnehmer PC im XML Format geliefert werden, habe ich mich für eine spezifische XML NoSQL Datenbank entschieden.
+# BaseX benötigt die Jave Umgebung und einige extra Module, die aktuell nicht automatisch per 'apt install basex' mitkommen. Deshalb:
+sudo apt install openjdk-11-jdk-headless
+sudo apt install libtagsoup-java libjline2-java libxml-commons-resolver1.1-java libjing-java
 sudo apt install basex
 ```
 ### Endpoint anlegen
@@ -52,6 +55,9 @@ pip install Flask Flask-SocketIO
 # pip3 install gunicorn
 pip install BaseXClient
 mkdir ~/basexdb
+exit # da der User livetiming nicht sudo kann, den folgenden Befehl als Standartuser ausführen:
+sudo chown -R livetiming:livetiming /home/livetiming/basexdb/
+
 ```
 ### BaseX konfigurieren
 #### als systemd Dienst einrichten
@@ -72,6 +78,7 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
+# und jetzt den Dienst starten und richtig einschalten:
 sudo systemctl start basexserver
 sudo systemctl enable basexserver
 
