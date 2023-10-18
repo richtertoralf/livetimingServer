@@ -1,18 +1,13 @@
 # livetimingServer
 simpler Nachbau des FIS Livetiming Servers
 
-## nginx mit Python und MongoDB
+## nginx mit Python und BaseX
 ```
 sudo apt update && sudo apt upgrade
 # nginx Server installieren
 sudo apt install nginx
-# sudo apt install mongodb # funktioniert nicht unter Ubuntu 22.04, deshalb:
-wget https://repo.mongodb.org/apt/ubuntu/dists/jammy/mongodb-org/7.0/multiverse/binary-amd64/mongodb-org-server_7.0.2_amd64.deb
-# diesen Link erhältst du auf der MongoDB Projektseite. Ich habe die MongoDB Community Version für Ubuntu 22.04 gewählt.
-sudo dpkg -i mongodb-org-server_7.0.2_amd64.deb
-sudo apt install -f
-sudo systemctl start mongod
-sudo systemctl enable mongod
+# da die Daten vom Winlaufen Zeitnehmer PC im XML Format geliefert werden, habe ich mich für eine spezifische XML NoSQL Datenbank entschieden.
+sudo apt install basex
 ```
 ### Endpoint anlegen
 ```
@@ -54,9 +49,15 @@ su - livetiming
 python3 -m venv ~/livetimingenv
 cd ~/livetimingenv
 pip install Flask Flask-SocketIO
-pip3 install gunicorn
+# pip3 install gunicorn
+pip install BaseXClient
+
 ```
-### simples Python-Skript zum Empfang der xml-Daten
+### BaseX konfigurieren
+#### als systemd Dienst einrichten
+#### dem User 'livetiming' die Zugriffsrechte geben
+
+### simples Python-Skript zum Empfang der xml-Daten und zum Einfügen in die BaseX XML DB
 ```
 # als user 'livetiming' ausführen:
 # Erstelle die Pythondatei livetiming_receiver.py
@@ -64,24 +65,35 @@ mkdir ~/livetiming_app
 sudo touch ~/livetiming_app/livetiming_receiver.py
 sudo bash -c 'cat > ~/livetiming_app/livetiming_receiver.py' << EOF
 from flask import Flask, request
-from pymongo import MongoClient
+from BaseXClient import BaseXClient
 
 app = Flask(__name__)
-client = MongoClient('mongodb://localhost:27017/')  # Verbindung zur MongoDB herstellen
-db = client['livetiming_db']  # Datenbank auswählen
-collection = db['livetiming_data']  # Collection erstellen oder auswählen
 
 @app.route('/livetiming', methods=['POST'])
 def livetiming():
     xml_data = request.data  # Hier erhältst du die XML-Daten von der POST-Anfrage
     print("Empfangene XML-Daten:")
     print(xml_data.decode('utf-8'))  # Ausgabe der XML-Daten im Terminal
-    Speichere die XML-Daten in MongoDB
-    collection.insert_one({'xml_data': xml_data.decode('utf-8')})
-    return 'XML-Daten empfangen und in MongoDB gespeichert.'
+
+    # Verbindung zur BaseX-Datenbank herstellen
+    session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
+
+    # XML-Daten in die BaseX-Datenbank einfügen
+    try:
+        session.execute("CREATE DB livetiming_db")
+        session.execute("OPEN livetiming_db")
+        session.add(xml_data)  # Hier fügst du die XML-Daten zur Datenbank hinzu
+        session.execute("CLOSE")
+        return 'XML-Daten empfangen und in BaseX gespeichert.'
+    except Exception as e:
+        return f'Fehler beim Speichern der XML-Daten: {e}'
+    finally:
+        # Sitzung schließen
+        session.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
 EOF
 chmod -R 700 ~/livetiming_app
 ```
