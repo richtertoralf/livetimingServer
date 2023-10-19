@@ -120,7 +120,7 @@ def livetiming():
 
     # Verbindung zur BaseX-Datenbank herstellen
     try:
-        with BaseXClient.Session('localhost', 1984, 'livetiming', 'password') as session:
+        with BaseXClient.Session('localhost', 1984, 'livetiming', 'linux') as session:
             # Neue Datenbank erstellen, wenn nicht vorhanden
             session.execute("CREATE DB if not exists livetiming_db")
 
