@@ -8,27 +8,29 @@ sudo apt update && sudo apt upgrade
 sudo apt install nginx
 # da die Daten vom Winlaufen Zeitnehmer PC im XML Format geliefert werden, habe ich mich für eine spezifische XML NoSQL Datenbank entschieden.
 # zur Installation von BaseX und Java direkt auf der Homepage nachsehen:
-# https://adoptium.net/installation/linux/
-# https://basex.org/download/
-# Es gibt fertige Binärdateien. Diese dann nach /usr/local/bin verschieben.
-
+# https://adoptium.net/installation/linux/   oder einfach:
+sudo apt install basex
 ```
 ### Endpoint anlegen
+In Winlaufen funktioniert derzeit nur die Ziel-Angabe: <Domain:Port>
 ```
 # Erstelle eine neue nginx-Konfigurationsdatei
 sudo touch /etc/nginx/sites-available/livetiming
-
-# Nutze 'echo' und 'cat', um den Inhalt in die Datei zu schreiben
-sudo bash -c 'cat > /etc/nginx/sites-available/livetiming' << EOF
+# Inhalt in Datei schreiben
+sudo bash -c 'cat > /etc/nginx/sites-available/livetiming' << 'EOF'
 server {
-    listen 80;
-    server_name 172.20.1.101; # die IP Adresse anpassen bzw. Domain eintragen
+    listen 0.0.0.0:5000;
+    server_name _;
 
-    location /livetiming {
-        proxy_pass http://127.0.0.1:5000;  # Weiterleitung an die Flask-Anwendung
+    location / {
+        proxy_pass http://127.0.0.1:5001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 EOF
@@ -49,19 +51,22 @@ sudo apt install python3-pip python3-venv
 ```
 # virtuelle Umgebung und User für Python-App anlegen und Pakete mit pip installieren
 sudo adduser livetiming
+sudo usermod -aG sudo livetiming
 su - livetiming
 python3 -m venv ~/livetimingenv
 cd ~/livetimingenv
 pip install Flask Flask-SocketIO
-# pip3 install gunicorn
-pip install BaseXClient
 mkdir ~/basexdb
-exit # da der User livetiming nicht sudo kann, den folgenden Befehl als Standartuser ausführen:
-sudo chown -R livetiming:livetiming /home/livetiming/basexdb/
-
 ```
 ### BaseX konfigurieren
 #### als systemd Dienst einrichten
+```
+# ermitteln, wo der basexserver liegt:
+whereis basexserver
+# Verzeichnis für Logdateien anlegen
+mkdir -p /home/livetiming/basexdb/log
+
+```
 ```
 sudo bash -c 'cat > /etc/systemd/system/basexserver.service' << EOF
 [Unit]
@@ -69,10 +74,12 @@ Description=BaseX XML Database
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/basex/bin/basexserver
+ExecStart=/usr/bin/basexserver
 User=livetiming
-WorkingDirectory=/home/livetiming/basex
+WorkingDirectory=/home/livetiming/basexdb
 Restart=always
+StandardOutput=append:/home/livetiming/basexdb/log/basexserver.log
+StandardError=append:/home/livetiming/basexdb/log/basexserver.log
 
 [Install]
 WantedBy=multi-user.target
@@ -85,6 +92,10 @@ sudo systemctl enable basexserver
 ```
 #### dem User 'livetiming' die Zugriffsrechte für die DB geben
 ```
+Nach dem Start des Dienstes, wird auch die Konfigurationsdatei angelegt:
+livetiming@server101:/$ find / -type f -name ".basex" 2>/dev/null
+/home/livetiming/basex/.basex
+# Hier könnte jetzt u.a. ein User mit Password für den Zugriff eingetragen werden.
 sudo nano /home/livetiming/basex/.basex
 ```
 
@@ -93,38 +104,44 @@ sudo nano /home/livetiming/basex/.basex
 # als user 'livetiming' ausführen:
 # Erstelle die Pythondatei livetiming_receiver.py
 mkdir ~/livetiming_app
-sudo touch ~/livetiming_app/livetiming_receiver.py
-sudo bash -c 'cat > ~/livetiming_app/livetiming_receiver.py' << EOF
+touch ~/livetiming_app/livetiming_receiver.py
+# Dateiinhalt eintragen:
+bash -c 'cat > ~/livetiming_app/livetiming_receiver.py' << 'EOF'
 from flask import Flask, request
 from BaseXClient import BaseXClient
 
 app = Flask(__name__)
 
-@app.route('/livetiming', methods=['POST'])
+@app.route('/', methods=['POST'])
 def livetiming():
     xml_data = request.data  # Hier erhältst du die XML-Daten von der POST-Anfrage
     print("Empfangene XML-Daten:")
     print(xml_data.decode('utf-8'))  # Ausgabe der XML-Daten im Terminal
 
-    # Verbindung zur BaseX-Datenbank herstellen mit den Anmeldeinformationen des Livetiming-Benutzers
-    session = BaseXClient.Session('localhost', 1984, 'livetiming', 'linux')
-
-    # XML-Daten in die BaseX-Datenbank einfügen
+    # Verbindung zur BaseX-Datenbank herstellen
+    global session  # Zugriff auf die äußere Variable
     try:
-        session.execute("CREATE DB livetiming_db")
-        session.execute("OPEN livetiming_db")
-        session.add(xml_data)  # Hier fügst du die XML-Daten zur Datenbank hinzu
-        session.execute("CLOSE")
-        return 'XML-Daten empfangen und in BaseX gespeichert.'
+        with BaseXClient.Session('localhost', 1984, 'livetiming', 'password') as session:
+            # Neue Datenbank erstellen, wenn nicht vorhanden
+            session.execute("CREATE DB if not exists livetiming_db")
+
+            # XML-Daten in die BaseX-Datenbank einfügen
+            session.add("livetiming_db", xml_data)
+
+            print("XML-Daten in die Datenbank eingetragen.")
+            return 'XML-Daten empfangen und in BaseX gespeichert.'
     except Exception as e:
+        print(f"Fehler beim Speichern der XML-Daten: {e}")
         return f'Fehler beim Speichern der XML-Daten: {e}'
     finally:
-        # Sitzung schließen
-        session.close()
+        # Sitzung schließen, unabhängig davon, ob eine Ausnahme auftritt oder nicht
+        if session:
+            session.close()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5001, debug=True)
 EOF
+# Berechtigungen setzen
 chmod -R 700 ~/livetiming_app
 ```
 ### simples Beispiel zum Abrufen der Daten aus der Datenbank und Verteilung an die Clients
