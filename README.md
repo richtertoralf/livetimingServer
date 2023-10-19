@@ -119,7 +119,6 @@ def livetiming():
     print(xml_data.decode('utf-8'))  # Ausgabe der XML-Daten im Terminal
 
     # Verbindung zur BaseX-Datenbank herstellen
-    global session  # Zugriff auf die äußere Variable
     try:
         with BaseXClient.Session('localhost', 1984, 'livetiming', 'password') as session:
             # Neue Datenbank erstellen, wenn nicht vorhanden
@@ -133,13 +132,10 @@ def livetiming():
     except Exception as e:
         print(f"Fehler beim Speichern der XML-Daten: {e}")
         return f'Fehler beim Speichern der XML-Daten: {e}'
-    finally:
-        # Sitzung schließen, unabhängig davon, ob eine Ausnahme auftritt oder nicht
-        if session:
-            session.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
+
 EOF
 # Berechtigungen setzen
 chmod -R 700 ~/livetiming_app
