@@ -56,16 +56,12 @@ su - livetiming
 python3 -m venv ~/livetimingenv
 cd ~/livetimingenv
 pip install Flask Flask-SocketIO
-mkdir ~/basexdb
 ```
 ### BaseX konfigurieren
 #### als systemd Dienst einrichten
 ```
 # ermitteln, wo der basexserver liegt:
 whereis basexserver
-# Verzeichnis für Logdateien anlegen
-mkdir -p /home/livetiming/basexdb/log
-
 ```
 ```
 sudo bash -c 'cat > /etc/systemd/system/basexserver.service' << EOF
@@ -76,11 +72,8 @@ After=network.target
 [Service]
 ExecStart=/usr/bin/basexserver
 User=livetiming
-WorkingDirectory=/home/livetiming/basex/data/
+WorkingDirectory=/home/livetiming/basex
 Restart=always
-StandardOutput=append:/home/livetiming/basexdb/log/basexserver.log
-StandardError=append:/home/livetiming/basexdb/log/basexserver.log
-
 [Install]
 WantedBy=multi-user.target
 EOF
