@@ -76,7 +76,7 @@ After=network.target
 [Service]
 ExecStart=/usr/bin/basexserver
 User=livetiming
-WorkingDirectory=/home/livetiming/basexdb
+WorkingDirectory=/home/livetiming/basex/data/
 Restart=always
 StandardOutput=append:/home/livetiming/basexdb/log/basexserver.log
 StandardError=append:/home/livetiming/basexdb/log/basexserver.log
