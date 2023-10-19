@@ -117,14 +117,19 @@ def livetiming():
             # Neue Datenbank erstellen, wenn nicht vorhanden
             session.execute("CREATE DB if not exists livetiming_db")
 
+            # Datenbank öffnen
+            session.execute("OPEN livetiming_db")
+
             # XML-Daten in die BaseX-Datenbank einfügen
             session.add("livetiming_db", xml_data)
 
             print("XML-Daten in die Datenbank eingetragen.")
             return 'XML-Daten empfangen und in BaseX gespeichert.'
+
     except Exception as e:
-        print(f"Fehler beim Speichern der XML-Daten: {e}")
-        return f'Fehler beim Speichern der XML-Daten: {e}'
+        error_message = f"Fehler beim Speichern der XML-Daten: {e}"
+        print(error_message)
+        return error_message
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
