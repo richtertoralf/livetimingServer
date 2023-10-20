@@ -1,16 +1,35 @@
 # livetimingServer
-simpler Nachbau des FIS Livetiming Servers
+simpler Nachbau eines Livetiming Servers
 
-## nginx mit Python und BaseX
+## Ubuntu 22.04 / nginx mit Python und BaseX
 ```
 sudo apt update && sudo apt upgrade
 # nginx Server installieren
 sudo apt install nginx
 # da die Daten vom Winlaufen Zeitnehmer PC im XML Format geliefert werden, habe ich mich für eine spezifische XML NoSQL Datenbank entschieden.
-# zur Installation von BaseX und Java direkt auf der Homepage nachsehen:
-# https://adoptium.net/installation/linux/   oder einfach:
 sudo apt install basex
 ```
+```
+# Achtung, die auf diese Art und Weise installierte BaseX DB ist nur die Core-Version und nicht aktuell (Stand 10/2023)
+# Deshalb, zur Installation von BaseX und Java direkt auf der Homepage nachsehen:
+# https://adoptium.net/installation/linux/
+echo "deb [arch=amd64] https://some.repository.url focal main" | sudo tee /etc/apt/sources.list.d/adoptium.list > /dev/null
+sudo apt install -y wget apt-transport-https
+sudo mkdir -p /etc/apt/keyrings
+wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | sudo tee /etc/apt/keyrings/adoptium.asc
+sudo echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | sudo tee /etc/apt/sources.list.d/adoptium.list
+deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb jammy main
+sudo apt update
+apt install temurin-17-jdk
+# https://basex.org/
+wget https://files.basex.org/releases/10.7/BaseX107.zip
+sudo unzip BaseX107.zip -d /opt
+sudo /opt/basex/bin/basexhttp -c PASSWORD
+# Damit startest du BaseX inklusive der Weboberfläche und wirst aber vorher im Terminal aufgefordert, ein Startpasswort für den User: admin festzulegen.
+# Jetzt erreichst du die Weboberfläche via "<die-Ip-deines-Servers>:8080" oder "localhost:8080".
+```
+>Jetzt kannst du die BaseX DB erkunden und z.B. eine Datenbank anlegen.
+
 ### Endpoint anlegen
 In Winlaufen funktioniert derzeit nur die Ziel-Angabe: <Domain:Port>
 ```
