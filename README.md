@@ -39,8 +39,8 @@ sudo /opt/basex/bin/basexhttp -c PASSWORD
 
 ## Nginx Endpoint anlegen
 In Winlaufen funktioniert derzeit nur die Ziel-Angabe: <Domain:Port>,
-deswegen verwende ich keinen Pfad, wie z.B. "<Server-IP>/livetiming".
-Als Ziel in Winlaufen (Setup/FIS) wird dann eingegeben: "<meine-Server-IP>:5000",
+deswegen verwende ich keinen Pfad, wie z.B. "Server-IP/livetiming".
+Als Ziel in Winlaufen (Setup/FIS) wird dann eingegeben: "meine-Server-IP:5000",
 zum Testen dieses "livetiming-Servers".
 ### via Port 5000
 ```
