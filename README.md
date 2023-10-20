@@ -1,17 +1,22 @@
 # livetimingServer
 simpler Nachbau eines Livetiming Servers
+auf Ubuntu 22.04 OS, mit Nginx, BaseX DB, Python, Websocket, JavaScript, CSS, HTML
 
-## Ubuntu 22.04 / nginx mit Python und BaseX
+## Installation
 ```
 sudo apt update && sudo apt upgrade
 # nginx Server installieren
 sudo apt install nginx
-# da die Daten vom Winlaufen Zeitnehmer PC im XML Format geliefert werden, habe ich mich für eine spezifische XML NoSQL Datenbank entschieden.
-sudo apt install basex
-```
-```
+##################
+# da die Daten vom Winlaufen Zeitnehmer PC im XML Format geliefert werden,
+# habe ich mich für eine spezifische XML NoSQL Datenbank entschieden.
+# sudo apt install basex # das funktioniert nicht gut!
 # Achtung, die auf diese Art und Weise installierte BaseX DB ist nur die Core-Version und nicht aktuell (Stand 10/2023)
-# Deshalb, zur Installation von BaseX und Java direkt auf der Homepage nachsehen:
+```
+## Installation der BaseX Datenbank
+```
+# Deshalb, zur Installation von BaseX und Java direkt auf der Homepage nachsehen.
+# BaseX empfiehlt die Java-Umgebung von adoptium.net.
 # https://adoptium.net/installation/linux/
 echo "deb [arch=amd64] https://some.repository.url focal main" | sudo tee /etc/apt/sources.list.d/adoptium.list > /dev/null
 sudo apt install -y wget apt-transport-https
@@ -21,17 +26,23 @@ sudo echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adopt
 deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb jammy main
 sudo apt update
 apt install temurin-17-jdk
+###################
 # https://basex.org/
 wget https://files.basex.org/releases/10.7/BaseX107.zip
 sudo unzip BaseX107.zip -d /opt
+sudo chmod -R 755 /opt/basex
 sudo /opt/basex/bin/basexhttp -c PASSWORD
 # Damit startest du BaseX inklusive der Weboberfläche und wirst aber vorher im Terminal aufgefordert, ein Startpasswort für den User: admin festzulegen.
 # Jetzt erreichst du die Weboberfläche via "<die-Ip-deines-Servers>:8080" oder "localhost:8080".
 ```
 >Jetzt kannst du die BaseX DB erkunden und z.B. eine Datenbank anlegen.
 
-### Endpoint anlegen
-In Winlaufen funktioniert derzeit nur die Ziel-Angabe: <Domain:Port>
+## Nginx Endpoint anlegen
+In Winlaufen funktioniert derzeit nur die Ziel-Angabe: <Domain:Port>,
+deswegen verwende ich keinen Pfad, wie z.B. "<Server-IP>/livetiming".
+Als Ziel in Winlaufen (Setup/FIS) wird dann eingegeben: "<meine-Server-IP>:5000",
+zum Testen dieses "livetiming-Servers".
+### via Port 5000
 ```
 # Erstelle eine neue nginx-Konfigurationsdatei
 sudo touch /etc/nginx/sites-available/livetiming
@@ -56,12 +67,12 @@ EOF
 # symbolischen Link erstellen
 sudo ln -s /etc/nginx/sites-available/livetiming /etc/nginx/sites-enabled/
 ```
-### Backendabhängigkeiten für Python installieren und User 'livetiming' anlegen
+## Pakete für Python installieren und Linux-User 'livetiming' anlegen
 ```
-# überprüfen, ob Python vorhanden ist
+# überprüfen, ob Python3 vorhanden ist
 python3 --version
 # und gegenfalls nachinstallieren
-sudo apt install python3
+# sudo apt install python3
 # überprüfen ob pip installiert ist
 pip3 --version
 # und gegebenfalls nachinstallieren
@@ -76,8 +87,8 @@ python3 -m venv ~/livetimingenv
 cd ~/livetimingenv
 pip install Flask Flask-SocketIO
 ```
-### BaseX konfigurieren
-#### als systemd Dienst einrichten
+## BaseX konfigurieren
+### als systemd Dienst einrichten
 ```
 # ermitteln, wo der basexserver liegt:
 whereis basexserver
@@ -89,9 +100,7 @@ Description=BaseX XML Database
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/basexserver
-User=livetiming
-WorkingDirectory=/home/livetiming/basex
+ExecStart=/opt/basex/bin/basexhttp
 Restart=always
 [Install]
 WantedBy=multi-user.target
